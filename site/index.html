@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="TradingAgent researches market signals, explains decisions, and validates actions through simulation and risk controls.">
+  <meta name="theme-color" content="#07111f">
+  <title>Trading Agent — Agent-as-a-Service</title>
+  <script>
+    try {
+      const savedTheme = localStorage.getItem("TradingAgent-theme");
+      document.documentElement.dataset.theme = savedTheme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      const savedLanguage = localStorage.getItem("TradingAgent-language");
+      document.documentElement.lang = savedLanguage || "en";
+    } catch { document.documentElement.dataset.theme = "dark"; }
+  </script>
+  <style>
+    :root {
+      --paper: #f3f7fc;
+      --paper-soft: #e6eef8;
+      --panel: rgba(255,255,255,.72);
+      --ink: #0b1626;
+      --muted: #53657c;
+      --line: rgba(17,42,76,.18);
+      --accent: #3f82ff;
+      --accent-soft: color-mix(in srgb, var(--accent) 13%, transparent);
+      --reverse: #f7fbff;
+    }
+    :root[data-theme="dark"] {
+      --paper: #07111f;
+      --paper-soft: #0a192b;
+      --panel: rgba(12,29,50,.72);
+      --ink: #f2f7ff;
+      --muted: #9db0ca;
+      --line: rgba(207,225,255,.16);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 82% 0, color-mix(in srgb, var(--accent) 20%, transparent), transparent 30rem),
+        linear-gradient(145deg, var(--paper), var(--paper-soft));
+      font-family: "Aptos", "Segoe UI", sans-serif;
+      min-height: 100vh;
+    }
+    a { color: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    .shell { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--paper) 84%, transparent);
+      backdrop-filter: blur(18px);
+    }
+    .topbar-inner { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 13px; text-decoration: none; }
+    .brand-mark { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--accent); color: var(--accent); font: 700 12px/1 "Consolas", monospace; }
+    .brand strong, .brand small { display: block; }
+    .brand strong { font-family: Georgia, serif; font-size: 1rem; }
+    .brand small { margin-top: 3px; color: var(--muted); font: 600 10px/1.2 "Consolas", monospace; letter-spacing: .1em; text-transform: uppercase; }
+    .nav { display: flex; gap: 24px; }
+    .nav a { color: var(--muted); font: 600 .76rem/1 "Consolas", monospace; letter-spacing: .08em; text-decoration: none; text-transform: uppercase; }
+    .nav a:hover { color: var(--accent); }
+    .controls { display: flex; gap: 8px; }
+    .control { min-height: 38px; padding: 0 12px; border: 1px solid var(--line); color: var(--ink); background: transparent; cursor: pointer; font: 650 .75rem/1 "Consolas", monospace; }
+    .control:hover { border-color: var(--accent); color: var(--accent); }
+    .hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: clamp(40px, 8vw, 110px); align-items: center; padding-block: clamp(80px, 11vw, 150px); }
+    .eyebrow, .stage-index { color: var(--accent); font: 650 .72rem/1.4 "Consolas", monospace; letter-spacing: .12em; }
+    h1, h2, h3 { margin: 0; }
+    h1 { max-width: 850px; margin-top: 22px; font: 400 clamp(3.3rem, 7vw, 7rem)/.94 Georgia, serif; letter-spacing: -.055em; }
+    .tagline { margin: 24px 0 0; color: var(--accent); font: italic 400 clamp(1.3rem, 2vw, 1.8rem)/1.35 Georgia, serif; }
+    .intro { max-width: 760px; margin: 24px 0 0; color: var(--muted); font-size: 1.08rem; line-height: 1.8; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+    .action { display: inline-flex; align-items: center; gap: 20px; min-height: 46px; padding: 0 16px; border: 1px solid var(--accent); text-decoration: none; font: 650 .78rem/1 "Consolas", monospace; letter-spacing: .04em; }
+    .action.primary { color: var(--reverse); background: var(--accent); }
+    .action.secondary { color: var(--accent); background: var(--accent-soft); }
+    .action:hover { transform: translateY(-2px); }
+    .signal { position: relative; aspect-ratio: 1; max-width: 420px; justify-self: end; }
+    .signal::before, .signal::after { position: absolute; border: 1px solid var(--line); content: ""; inset: 8%; border-radius: 50%; }
+    .signal::after { inset: 24%; }
+    .signal-core { position: absolute; inset: 36%; display: grid; place-items: center; border: 1px solid var(--accent); color: var(--accent); background: var(--accent-soft); font: 700 1rem/1 "Consolas", monospace; }
+    .signal-node { position: absolute; width: 9px; height: 9px; border: 2px solid var(--paper); background: var(--accent); box-shadow: 0 0 16px var(--accent); animation: pulse 2.4s ease-in-out infinite alternate; }
+    .node-1 { top: 8%; left: 47%; } .node-2 { top: 29%; right: 10%; animation-delay: -.4s; } .node-3 { right: 18%; bottom: 15%; animation-delay: -.8s; }
+    .node-4 { bottom: 8%; left: 46%; animation-delay: -1.2s; } .node-5 { left: 12%; bottom: 24%; animation-delay: -1.6s; } .node-6 { top: 20%; left: 16%; animation-delay: -2s; }
+    @keyframes pulse { to { transform: scale(1.6); opacity: .45; } }
+    .section { padding-block: clamp(64px, 8vw, 110px); border-top: 1px solid var(--line); }
+    .section-head { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 28px; align-items: start; margin-bottom: 38px; }
+    .section-head h2 { font: 400 clamp(2.4rem, 4vw, 4.2rem)/1 Georgia, serif; letter-spacing: -.045em; }
+    .section-head p { max-width: 680px; margin: 12px 0 0; color: var(--muted); line-height: 1.7; }
+    .stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .stage { min-height: 230px; padding: 25px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--panel); }
+    .stage:nth-child(2), .stage:nth-child(5) { background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
+    .stage h3 { margin-top: 28px; font: 400 1.5rem/1.15 Georgia, serif; }
+    .stage p { margin: 14px 0 0; color: var(--muted); line-height: 1.65; }
+    .principles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .principles article { min-height: 210px; padding: 24px; border: 1px solid var(--line); background: var(--panel); }
+    .principles span { color: var(--accent); font: 650 .75rem/1 "Consolas", monospace; }
+    .principles h3 { margin-top: 42px; font: 400 1.45rem/1.2 Georgia, serif; }
+    .principles p { color: var(--muted); line-height: 1.65; }
+    footer { padding-block: 36px; border-top: 1px solid var(--line); color: var(--muted); font: .76rem/1.6 "Consolas", monospace; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 20px; }
+    footer a { color: var(--accent); }
+    @media (max-width: 860px) {
+      .nav { display: none; }
+      .hero { grid-template-columns: 1fr; }
+      .signal { width: min(320px, 78vw); justify-self: start; }
+      .section-head { grid-template-columns: 1fr; gap: 10px; }
+      .stages, .principles { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 32px, 1180px); }
+      .brand small { display: none; }
+      .control { padding-inline: 9px; }
+      h1 { font-size: clamp(2.65rem, 13vw, 4rem); }
+      .stages, .principles { grid-template-columns: 1fr; }
+      .footer-inner { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#top">
+        <span class="brand-mark">JL</span>
+        <span><strong>TradingAgent</strong><small>Agent-as-a-Service</small></span>
+      </a>
+      <nav class="nav" aria-label="Project navigation">
+        <a href="#loop" data-en="Agent Loop" data-zh="Agent 闭环">Agent Loop</a>
+        <a href="#principles" data-en="Principles" data-zh="设计原则">Principles</a>
+      </nav>
+      <div class="controls">
+        <button class="control" type="button" data-language>中 / EN</button>
+        <button class="control" type="button" data-theme aria-label="Toggle color theme">◐</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell" id="top">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">07 / RESEARCH / SIMULATE / CONTROL</div>
+        <h1>Trading Agent</h1>
+        <p class="tagline" data-en="Research aggressively. Execute conservatively." data-zh="大胆研究，谨慎执行。">Research aggressively. Execute conservatively.</p>
+        <p class="intro" data-en="TradingAgent researches market signals, explains decisions, and validates actions through simulation and risk controls." data-zh="TradingAgent 在仿真、风控与人工审批约束下研究市场信号，并解释交易决策。">TradingAgent researches market signals, explains decisions, and validates actions through simulation and risk controls.</p>
+        <div class="hero-actions">
+          <a class="action primary" href="https://github.com/0x0addc001/TradingAgent" target="_blank" rel="noreferrer">
+            <span data-en="View Repository" data-zh="查看代码仓库">View Repository</span><span>↗</span>
+          </a>
+          <a class="action secondary" href="#loop">
+            <span data-en="Explore the Agent Loop" data-zh="查看 Agent 闭环">Explore the Agent Loop</span><span>↓</span>
+          </a>
+        </div>
+      </div>
+      <div class="signal" aria-hidden="true">
+        <div class="signal-core">AaaS</div>
+        <i class="signal-node node-1"></i><i class="signal-node node-2"></i><i class="signal-node node-3"></i>
+        <i class="signal-node node-4"></i><i class="signal-node node-5"></i><i class="signal-node node-6"></i>
+      </div>
+    </section>
+
+    <section class="section" id="loop">
+      <div class="section-head">
+        <div class="eyebrow">SYSTEM / 06</div>
+        <div>
+          <h2 data-en="One loop. Six layers." data-zh="一个闭环，六个层次。">One loop. Six layers.</h2>
+          <p data-en="From raw signals to measurable behavior, each layer contributes a distinct part of the Agent system." data-zh="从原始信号到可衡量行为，每一层都承担 Agent 系统中不可替代的一部分。">From raw signals to measurable behavior, each layer contributes a distinct part of the Agent system.</p>
+        </div>
+      </div>
+      <div class="stages">
+        <article class="stage">
+          <div class="stage-index">01 / DATA</div>
+          <h3 data-en="Point-in-time market" data-zh="时点市场数据">Point-in-time market</h3>
+          <p data-en="Ticks, fundamentals, filings, news and risk events." data-zh="行情、基本面、公告、新闻与风险事件。">Ticks, fundamentals, filings, news and risk events.</p>
+        </article>
+        <article class="stage">
+          <div class="stage-index">02 / MODELS</div>
+          <h3 data-en="Signals &amp; reasoning" data-zh="信号与推理">Signals &amp; reasoning</h3>
+          <p data-en="Time-series models, market reasoner and policy model." data-zh="时序模型、市场推理与策略模型。">Time-series models, market reasoner and policy model.</p>
+        </article>
+        <article class="stage">
+          <div class="stage-index">03 / TRAINING</div>
+          <h3 data-en="Research policy" data-zh="研究策略">Research policy</h3>
+          <p data-en="Research SFT and simulation-based reinforcement learning." data-zh="研究报告 SFT 与仿真强化学习。">Research SFT and simulation-based reinforcement learning.</p>
+        </article>
+        <article class="stage">
+          <div class="stage-index">04 / INFERENCE</div>
+          <h3 data-en="Decision support" data-zh="决策支持">Decision support</h3>
+          <p data-en="Streaming signals, scenario analysis and recommendations." data-zh="流式信号、情景分析与决策建议。">Streaming signals, scenario analysis and recommendations.</p>
+        </article>
+        <article class="stage">
+          <div class="stage-index">05 / HARNESS</div>
+          <h3 data-en="Risk &amp; simulation" data-zh="风控与仿真">Risk &amp; simulation</h3>
+          <p data-en="Market data, risk, simulation and approval tools." data-zh="行情、风控、仿真与审批工具。">Market data, risk, simulation and approval tools.</p>
+        </article>
+        <article class="stage">
+          <div class="stage-index">06 / EVAL</div>
+          <h3 data-en="Risk-adjusted quality" data-zh="风险调整质量">Risk-adjusted quality</h3>
+          <p data-en="Backtests, drawdown, slippage and compliance." data-zh="回测、回撤、滑点与合规。">Backtests, drawdown, slippage and compliance.</p>
+        </article></div>
+    </section>
+
+    <section class="section" id="principles">
+      <div class="section-head">
+        <div class="eyebrow">NON-NEGOTIABLES</div>
+        <div>
+          <h2 data-en="Built to stay trustworthy." data-zh="可靠，是设计出来的。">Built to stay trustworthy.</h2>
+          <p data-en="The Agent is only as useful as the boundaries around it are clear." data-zh="Agent 的价值，取决于它周围的边界是否足够清晰。">The Agent is only as useful as the boundaries around it are clear.</p>
+        </div>
+      </div>
+      <div class="principles">
+        <article>
+          <span>01</span>
+          <h3 data-en="No live trading by default" data-zh="默认不实盘">No live trading by default</h3>
+          <p data-en="Consequential orders require explicit human approval." data-zh="有实际影响的交易指令必须经过明确人工审批。">Consequential orders require explicit human approval.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3 data-en="Prevent look-ahead" data-zh="避免未来函数">Prevent look-ahead</h3>
+          <p data-en="Point-in-time correctness is mandatory for every signal." data-zh="每个信号都必须保证时点正确性。">Point-in-time correctness is mandatory for every signal.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3 data-en="Risk before return" data-zh="先看风险">Risk before return</h3>
+          <p data-en="Evaluate drawdown and compliance before headline performance." data-zh="先评估回撤与合规，再观察表面收益。">Evaluate drawdown and compliance before headline performance.</p>
+        </article></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell footer-inner">
+      <span>TradingAgent / Agent-as-a-Service</span>
+      <a href="https://github.com/0x0addc001/TradingAgent" target="_blank" rel="noreferrer">GitHub ↗</a>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const languageButton = document.querySelector("[data-language]");
+      const themeButton = document.querySelector("[data-theme]");
+      const translatable = [...document.querySelectorAll("[data-en][data-zh]")];
+      let language = root.lang === "zh" ? "zh" : "en";
+      function applyLanguage() {
+        root.lang = language;
+        document.documentElement.dataset.language = language;
+        translatable.forEach((node) => { node.textContent = node.dataset[language]; });
+        languageButton.textContent = language === "en" ? "中 / EN" : "EN / 中";
+        try { localStorage.setItem("TradingAgent-language", language); } catch {}
+      }
+      languageButton.addEventListener("click", () => { language = language === "en" ? "zh" : "en"; applyLanguage(); });
+      themeButton.addEventListener("click", () => {
+        const next = root.dataset.theme === "dark" ? "light" : "dark";
+        root.dataset.theme = next;
+        try { localStorage.setItem("TradingAgent-theme", next); } catch {}
+      });
+      applyLanguage();
+    })();
+  </script>
+</body>
+</html>

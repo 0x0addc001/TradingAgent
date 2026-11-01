@@ -6,8 +6,6 @@ TradingAgent researches market signals, explains decisions, and validates action
 
 面向量化交易研究的 Agent：在仿真、风控和人工审批约束下研究市场信号并解释交易决策。
 
-**Status:** Project scaffold · [Portfolio](https://0x0addc001.github.io/#use-cases)
-
 ## Agent loop
 
 | Stage | Responsibility |
